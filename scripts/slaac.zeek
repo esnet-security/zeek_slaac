@@ -8,16 +8,19 @@ export {
     type SlaacInfo: record {
         ts: time &log;
         uid: string &log;
+        id: conn_id &log;
+        linklocal: bool &default=F &log;
         message_type: string &log;  # right now it's all NA's
         mac: string &log;
         override: bool &default=F &log;
-        orig_h: addr &log;
         prefix: subnet &log;
-        resp_h: addr &log;
         router: bool &default=F &log;
         solicited: bool &default=F &log;
         target: addr &log;
     };
+
+    # Link Local
+    const fe80: subnet = [fe80::]/10;
 }
 
 event zeek_init(){
@@ -71,16 +74,17 @@ event icmp_router_advertisement(c: connection, info: icmp_info, cur_hop_limit: c
     local slaac_info: SLAAC::SlaacInfo;
     slaac_info$ts = c$conn$ts;
     slaac_info$uid = c$conn$uid;
+    slaac_info$id = c$conn$id;
     slaac_info$message_type = "ra";
-    slaac_info$orig_h = c$id$orig_h;
-    slaac_info$resp_h = c$id$resp_h;
     slaac_info$router = T;
 
+    if(c$id$orig_h in fe80){
+        slaac_info$linklocal = T;
+    }
 
     for (o in options){
         if (options[o]$otype == 3){
             slaac_info$prefix = to_subnet(fmt("%s/%s",options[o]$prefix$prefix,options[o]$prefix$prefix_len));
-            print slaac_info$prefix;
         }
     }
     Log::write(SLAAC::SLAAC_LOG, slaac_info);
@@ -91,10 +95,13 @@ event icmp_router_solicitation(c: connection, info: icmp_info, options: icmp6_nd
 
     slaac_info$ts = c$conn$ts;
     slaac_info$uid = c$conn$uid;
+    slaac_info$id = c$conn$id;
     slaac_info$message_type = "rs";
-    slaac_info$orig_h = c$id$orig_h;
-    slaac_info$resp_h = c$id$resp_h;
     slaac_info$router = T;
+
+    if(c$id$orig_h in fe80){
+        slaac_info$linklocal = T;
+    }
 
     Log::write(SLAAC::SLAAC_LOG, slaac_info);
 }
@@ -104,13 +111,16 @@ event icmp_neighbor_advertisement(c: connection, info: icmp_info, router: bool, 
 
     slaac_info$ts = c$conn$ts;
     slaac_info$uid = c$conn$uid;
+    slaac_info$id = c$conn$id;
     slaac_info$message_type = "na";
     slaac_info$override = override;
-    slaac_info$orig_h = c$id$orig_h;
-    slaac_info$resp_h = c$id$resp_h;
     slaac_info$router = router;
     slaac_info$solicited = solicited;
     slaac_info$target = tgt;
+
+    if(c$id$orig_h in fe80){
+        slaac_info$linklocal = T;
+    }
 
     if(is_eui(c$id$orig_h)){
         slaac_info$mac = mac_from_eui(c$id$orig_h);
@@ -124,10 +134,13 @@ event icmp_neighbor_solicitation(c: connection, info: icmp_info, tgt: addr, opti
 
     slaac_info$ts = c$conn$ts;
     slaac_info$uid = c$conn$uid;
+    slaac_info$id = c$conn$id;
     slaac_info$message_type = "ns";
-    slaac_info$orig_h = c$id$orig_h;
-    slaac_info$resp_h = c$id$resp_h;
     slaac_info$target = tgt;
+
+    if(c$id$orig_h in fe80){
+        slaac_info$linklocal = T;
+    }
 
     if(is_eui(c$id$orig_h)){
         slaac_info$mac = mac_from_eui(c$id$orig_h);
