@@ -1,0 +1,6 @@
+[package]
+version = 0.1
+tags = ipv6, slaac
+script_dir = scripts
+description = This script creates a slaac.log from IPv6 SLAAC messages and attempts to parse link local EUI-64 back to MAC address for the origin if it's found.
+test_command = cd tests && btest -d slaac_tests
