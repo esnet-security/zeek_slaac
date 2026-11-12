@@ -1,1 +1,1 @@
-@load slaac
+@load ./slaac.zeek
